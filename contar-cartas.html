@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F5A43">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Hi‑Lo">
+<title>Hi‑Lo · Aprende a contar cartas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Fraunces:opsz,wght@9..144,600;9..144,800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --felt:#0F5A43; --felt-deep:#0A3F2F; --felt-line:#1C6E55;
+  --ivory:#FBF6EA; --ink:#1A2420; --brass:#D9B45E; --chip:#C2412F;
+  --text:#EAF2EC; --muted:#A6C3B5; --ok:#7FD8A9; --bad:#FF8A74;
+  --card-shadow:0 2px 0 rgba(0,0,0,.25),0 8px 18px rgba(0,0,0,.28);
+  --sans:"Bricolage Grotesque",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --serif:"Fraunces",Georgia,"Times New Roman",serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --felt:#0B4535; --felt-deep:#062A1F; --felt-line:#155642; --ivory:#EEE7D4;
+  }
+}
+:root[data-theme="dark"]{ --felt:#0B4535; --felt-deep:#062A1F; --felt-line:#155642; --ivory:#EEE7D4; }
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;background:var(--felt-deep);scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0;height:100%;display:flex;flex-direction:column;
+  background:var(--felt) radial-gradient(120% 80% at 50% 0%,rgba(255,255,255,.07),transparent 60%);
+  color:var(--text);font-family:var(--sans);font-size:17px;line-height:1.45;
+  -webkit-tap-highlight-color:transparent;overscroll-behavior:none;
+}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;touch-action:manipulation}
+button:focus-visible{outline:3px solid var(--brass);outline-offset:2px}
+
+header.top{display:flex;align-items:baseline;justify-content:space-between;padding:14px 20px 6px;max-width:640px;width:100%;margin:0 auto}
+header.top h1{font-family:var(--serif);font-weight:800;font-size:1.6rem;margin:0;letter-spacing:-.01em}
+header.top .stat{font-size:.85rem;color:var(--muted)}
+header.top .stat b{color:var(--brass);font-weight:600}
+
+main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.view{display:none;max-width:640px;margin:0 auto;padding:8px 20px 28px}
+.view.on{display:block}
+h2{font-family:var(--serif);font-weight:800;font-size:1.75rem;line-height:1.15;margin:6px 0 4px;letter-spacing:-.01em}
+.lede{color:var(--muted);margin:0 0 18px;max-width:34em}
+p{margin:0 0 12px}
+
+/* Cartas */
+.card{
+  --w:72px; width:var(--w); aspect-ratio:5/7; flex:none;
+  background:var(--ivory); color:var(--ink); border-radius:calc(var(--w)*.09);
+  box-shadow:var(--card-shadow); position:relative; font-family:var(--serif); font-weight:600;
+  display:grid;place-items:center;user-select:none;
+}
+.card.red{color:var(--chip)}
+.card .pip{font-size:calc(var(--w)*.5);line-height:1}
+.card .ci{position:absolute;font-size:calc(var(--w)*.2);line-height:.95;text-align:center;display:flex;flex-direction:column;align-items:center}
+.card .ci i{font-style:normal;font-size:.8em}
+.card .tl{top:7%;left:8%}
+.card .br{bottom:7%;right:8%;transform:rotate(180deg)}
+.card.big{--w:min(40vw,168px)}
+.card.mid{--w:min(26vw,104px)}
+.card.sm{--w:46px}
+.card.xs{--w:34px;border-radius:4px}
+.card.xs .tl,.card.xs .br{display:none}
+.card.xs .pip{font-size:13px;display:flex;flex-direction:column;align-items:center}
+.card.deal{animation:deal .32s cubic-bezier(.2,.8,.3,1.15) both}
+@keyframes deal{from{transform:translateY(-38px) rotate(-8deg);opacity:0}to{transform:none;opacity:1}}
+.card.ok{outline:4px solid var(--ok);outline-offset:3px}
+.card.bad{outline:4px solid var(--bad);outline-offset:3px;animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@media (prefers-reduced-motion: reduce){.card.deal,.card.bad{animation:none}}
+
+/* Ficha del conteo: el elemento memorable */
+.chip{
+  width:92px;height:92px;border-radius:50%;flex:none;display:grid;place-items:center;
+  background:
+    repeating-conic-gradient(var(--chip) 0 22.5deg,#F2EBDD 22.5deg 45deg);
+  box-shadow:0 4px 0 rgba(0,0,0,.3),0 10px 20px rgba(0,0,0,.25);
+}
+.chip span{
+  width:68px;height:68px;border-radius:50%;background:var(--chip);border:2px dashed rgba(255,255,255,.55);
+  display:grid;place-items:center;font-family:var(--serif);font-weight:800;font-size:1.6rem;color:#fff;
+  font-variant-numeric:tabular-nums;
+}
+.chip.gold{background:repeating-conic-gradient(#B98E2E 0 22.5deg,#F2EBDD 22.5deg 45deg)}
+.chip.gold span{background:#B98E2E}
+
+/* Botones */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:50px;padding:0 22px;border-radius:999px;font-weight:600;background:var(--brass);color:#2A1F05;box-shadow:0 3px 0 #9B7A2C}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 #9B7A2C}
+.btn.ghost{background:transparent;color:var(--text);box-shadow:inset 0 0 0 2px var(--felt-line)}
+.btn.ghost:active{transform:none}
+.btn.wide{width:100%}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.center{display:flex;flex-direction:column;align-items:center;text-align:center}
+
+.vals{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;margin-top:22px}
+.vbtn{min-height:76px;border-radius:18px;font-family:var(--serif);font-weight:800;font-size:2rem;box-shadow:0 4px 0 rgba(0,0,0,.3)}
+.vbtn:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.3)}
+.vbtn.plus{background:#2E8B66;color:#fff}
+.vbtn.zero{background:var(--ivory);color:var(--ink)}
+.vbtn.minus{background:var(--chip);color:#fff}
+
+.seg{display:flex;background:var(--felt-deep);border-radius:999px;padding:4px;gap:2px;width:100%}
+.seg button{flex:1;min-height:40px;border-radius:999px;font-size:.92rem;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--ivory);color:var(--ink);font-weight:600}
+.field{margin-bottom:14px}
+.field>label{display:block;font-size:.9rem;color:var(--muted);margin-bottom:6px}
+
+.stepper{display:flex;align-items:center;gap:14px;justify-content:center;margin:12px 0 18px}
+.stepper button{width:56px;height:56px;border-radius:50%;background:var(--felt-deep);font-size:1.8rem;font-weight:600;box-shadow:inset 0 0 0 2px var(--felt-line)}
+.stepper output{min-width:96px;text-align:center;font-family:var(--serif);font-weight:800;font-size:2.6rem;font-variant-numeric:tabular-nums}
+
+.panel{background:var(--felt-deep);border-radius:20px;padding:18px;margin-bottom:16px}
+.stats{display:flex;gap:22px;justify-content:center;color:var(--muted);font-size:.88rem;margin-top:16px}
+.stats b{display:block;color:var(--text);font-family:var(--serif);font-size:1.35rem;font-variant-numeric:tabular-nums}
+.feedback{min-height:1.5em;font-weight:600;margin-top:12px}
+.feedback.ok{color:var(--ok)} .feedback.bad{color:var(--bad)}
+
+.dealzone{min-height:min(60vw,250px);display:flex;align-items:center;justify-content:center;gap:12px;margin:10px 0}
+.progress{height:6px;border-radius:3px;background:var(--felt-deep);overflow:hidden;margin:6px 0}
+.progress>i{display:block;height:100%;background:var(--brass);width:0;transition:width .2s}
+
+.review{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:10px}
+.review .it{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.75rem;color:var(--muted);font-variant-numeric:tabular-nums}
+
+/* Lecciones */
+.lesson-dots{display:flex;gap:6px;margin:4px 0 14px}
+.lesson-dots i{flex:1;height:5px;border-radius:3px;background:var(--felt-deep)}
+.lesson-dots i.on{background:var(--brass)}
+.lesson h3{font-family:var(--serif);font-size:1.4rem;margin:0 0 8px;line-height:1.2}
+.lesson .demo{margin:16px 0}
+.rankgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:10px;justify-items:center}
+.rankgrid .slot{display:flex;flex-direction:column;align-items:center;gap:4px}
+.badge{font-family:var(--serif);font-weight:800;font-size:.95rem;min-width:34px;text-align:center;border-radius:999px;padding:1px 8px;visibility:hidden}
+.badge.show{visibility:visible}
+.b1{background:#2E8B66;color:#fff}.b0{background:var(--ivory);color:var(--ink)}.bm{background:var(--chip);color:#fff}
+.groups{display:grid;gap:10px}
+.groups div{display:flex;align-items:center;gap:12px;background:var(--felt-deep);border-radius:14px;padding:10px 14px}
+.groups .badge{visibility:visible;font-size:1.1rem;padding:4px 12px}
+table.ramp{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+table.ramp td,table.ramp th{padding:9px 8px;text-align:left;border-bottom:1px solid var(--felt-line)}
+table.ramp th{color:var(--muted);font-weight:400;font-size:.9rem}
+input[type=range]{width:100%;accent-color:var(--brass)}
+.note{font-size:.9rem;color:var(--muted)}
+
+/* Mesa */
+.table-felt{background:var(--felt-deep);border-radius:22px;padding:14px;margin:8px 0 14px}
+.hand{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed var(--felt-line)}
+.hand:last-child{border-bottom:0}
+.hand .who{width:70px;font-size:.82rem;color:var(--muted);flex:none}
+.hand .cards{display:flex;gap:4px;flex-wrap:wrap}
+.hand .cards .card{margin-right:-14px}
+.tray{display:flex;align-items:center;gap:10px;font-size:.85rem;color:var(--muted)}
+.tray .progress{flex:1}
+.reveal{font-variant-numeric:tabular-nums}
+
+/* Conteo real: visual del zapato */
+.shoe{display:flex;gap:16px;align-items:flex-end;justify-content:center;margin:12px 0}
+.stack{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:.8rem;color:var(--muted)}
+.stack .pile{width:64px;height:130px;background:rgba(0,0,0,.2);border-radius:8px;display:flex;align-items:flex-end;overflow:hidden;box-shadow:inset 0 0 0 2px var(--felt-line)}
+.stack .pile i{display:block;width:100%;background:repeating-linear-gradient(0deg,var(--ivory) 0 2px,#d8d0bd 2px 3px);transition:height .3s}
+
+nav.tabs{
+  display:flex;background:var(--felt-deep);border-top:1px solid var(--felt-line);flex:none;
+}
+nav.tabs button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px 10px;font-size:.72rem;color:var(--muted)}
+nav.tabs button svg{width:24px;height:24px}
+nav.tabs button[aria-current="page"]{color:var(--brass)}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Hi‑Lo</h1>
+  <div class="stat">Mejor racha <b id="hdrBest">0</b></div>
+</header>
+
+<main id="main">
+  <!-- APRENDER -->
+  <section class="view on" id="v-learn" aria-label="Aprender">
+    <div class="lesson-dots" id="lessonDots"></div>
+    <div class="lesson" id="lessonBody"></div>
+    <div class="row" style="margin-top:20px">
+      <button class="btn ghost" id="lPrev">Anterior</button>
+      <button class="btn" id="lNext" style="flex:1">Siguiente</button>
+    </div>
+  </section>
+
+  <!-- VALORES -->
+  <section class="view" id="v-drill" aria-label="Valores">
+    <h2>¿Cuánto vale?</h2>
+    <p class="lede">Toca el valor Hi‑Lo de cada carta. Busca velocidad sin pensar.</p>
+    <div class="center">
+      <div id="drillCard"></div>
+      <div class="vals">
+        <button class="vbtn plus" data-v="1">+1</button>
+        <button class="vbtn zero" data-v="0">0</button>
+        <button class="vbtn minus" data-v="-1">−1</button>
+      </div>
+      <div class="feedback" id="drillFb" aria-live="polite"></div>
+      <div class="stats">
+        <div><b id="dStreak">0</b>racha</div>
+        <div><b id="dAcc">–</b>aciertos</div>
+        <div><b id="dSpeed">–</b>seg/carta</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTEO CORRIDO -->
+  <section class="view" id="v-count" aria-label="Conteo corrido">
+    <h2>Conteo corrido</h2>
+    <p class="lede">Las cartas pasan una tras otra. Al final, dime el conteo.</p>
+    <div id="cSetup">
+      <div class="field"><label>Cartas</label>
+        <div class="seg" data-name="n">
+          <button aria-pressed="true" data-val="10">10</button><button aria-pressed="false" data-val="20">20</button><button aria-pressed="false" data-val="30">30</button><button aria-pressed="false" data-val="52">Mazo</button>
+        </div></div>
+      <div class="field"><label>Velocidad</label>
+        <div class="seg" data-name="speed">
+          <button aria-pressed="false" data-val="1600">Lenta</button><button aria-pressed="true" data-val="1000">Media</button><button aria-pressed="false" data-val="600">Rápida</button><button aria-pressed="false" data-val="350">Casino</button>
+        </div></div>
+      <div class="field"><label>Cartas a la vez</label>
+        <div class="seg" data-name="group">
+          <button aria-pressed="true" data-val="1">Una</button><button aria-pressed="false" data-val="2">Dos (para cancelar parejas)</button>
+        </div></div>
+      <button class="btn wide" id="cStart">Empezar a repartir</button>
+      <p class="note" style="margin-top:14px">Con “Mazo” el conteo final siempre es 0. Es la prueba clásica: si no terminas en 0, perdiste una carta en el camino.</p>
+    </div>
+    <div id="cRun" class="hidden">
+      <div class="progress"><i id="cProg"></i></div>
+      <div class="dealzone" id="cZone"></div>
+      <div class="center"><button class="btn ghost" id="cStop">Detener</button></div>
+    </div>
+    <div id="cAsk" class="hidden center">
+      <div class="panel" style="width:100%">
+        <p style="margin:0">¿Cuál es el conteo corrido?</p>
+        <div class="stepper"><button data-step="-1" aria-label="Restar">−</button><output id="cVal">0</output><button data-step="1" aria-label="Sumar">+</button></div>
+        <button class="btn wide" id="cCheck">Comprobar</button>
+      </div>
+    </div>
+    <div id="cResult" class="hidden center">
+      <div class="chip" id="cChip"><span id="cChipN">0</span></div>
+      <div class="feedback" id="cFb" aria-live="polite"></div>
+      <p class="note">Debajo de cada carta, el conteo acumulado:</p>
+      <div class="review" id="cReview"></div>
+      <div class="row" style="margin-top:18px;justify-content:center">
+        <button class="btn" id="cAgain">Otra ronda</button>
+        <button class="btn ghost" id="cSettings">Ajustes</button>
+      </div>
+      <div class="stats"><div><b id="cScore">0/0</b>rondas exactas</div></div>
+    </div>
+  </section>
+
+  <!-- CONTEO REAL -->
+  <section class="view" id="v-true" aria-label="Conteo real">
+    <h2>Conteo real</h2>
+    <p class="lede">Divide el conteo corrido entre los mazos que quedan por jugar. Redondea a un entero.</p>
+    <div class="field"><label>Mazos restantes</label>
+      <div class="seg" data-name="tmode">
+        <button aria-pressed="true" data-val="num">Te los digo</button><button aria-pressed="false" data-val="eye">Estímalos a ojo</button>
+      </div></div>
+    <div class="row" style="justify-content:center;gap:28px;margin:10px 0">
+      <div class="center"><div class="chip"><span id="tRC">0</span></div><span class="note" style="margin-top:8px">conteo corrido</span></div>
+      <div class="center"><div class="chip gold"><span id="tDK">0</span></div><span class="note" style="margin-top:8px">mazos que quedan</span></div>
+    </div>
+    <div class="shoe">
+      <div class="stack"><div class="pile"><i id="tShoe"></i></div>zapato</div>
+      <div class="stack"><div class="pile"><i id="tDisc"></i></div>descarte</div>
+    </div>
+    <p class="note center" style="margin:-4px 0 8px">Zapato de 6 mazos</p>
+    <div class="panel center">
+      <p style="margin:0">¿Cuál es el conteo real?</p>
+      <div class="stepper"><button data-step="-1" aria-label="Restar">−</button><output id="tVal">0</output><button data-step="1" aria-label="Sumar">+</button></div>
+      <button class="btn wide" id="tCheck">Comprobar</button>
+      <div class="feedback" id="tFb" aria-live="polite"></div>
+      <button class="btn ghost hidden" id="tNext" style="margin-top:8px">Siguiente</button>
+    </div>
+    <div class="stats"><div><b id="tScore">0/0</b>aciertos</div></div>
+  </section>
+
+  <!-- MESA -->
+  <section class="view" id="v-table" aria-label="Mesa">
+    <h2>Simulador de mesa</h2>
+    <p class="lede">Un zapato de 6 mazos y tres jugadores. Lleva la cuenta ronda tras ronda y compruébala cuando quieras.</p>
+    <div class="tray"><span>Descarte</span><div class="progress"><i id="mPen"></i></div><span id="mLeft">6 mazos</span></div>
+    <div class="table-felt" id="mTable"><p class="note" style="margin:6px 0">Toca “Repartir ronda” para empezar.</p></div>
+    <div class="row">
+      <button class="btn" id="mDeal" style="flex:1">Repartir ronda</button>
+      <button class="btn ghost" id="mAskBtn">Comprobar</button>
+    </div>
+    <div id="mAsk" class="panel center hidden" style="margin-top:16px">
+      <p style="margin:0">¿Cuál es el conteo corrido ahora?</p>
+      <div class="stepper"><button data-step="-1" aria-label="Restar">−</button><output id="mVal">0</output><button data-step="1" aria-label="Sumar">+</button></div>
+      <button class="btn wide" id="mCheck">Comprobar</button>
+    </div>
+    <div id="mRes" class="panel hidden reveal" style="margin-top:16px" aria-live="polite"></div>
+    <div class="row" style="margin-top:6px;justify-content:space-between">
+      <button class="btn ghost" id="mNew">Barajar zapato nuevo</button>
+      <span class="note">Ronda <b id="mRound">0</b></span>
+    </div>
+  </section>
+</main>
+
+<nav class="tabs" aria-label="Secciones">
+  <button data-v="learn" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5zM20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z"/></svg>Aprender</button>
+  <button data-v="drill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M12 9v6M9 12h6"/></svg>Valores</button>
+  <button data-v="count"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="10" height="14" rx="2"/><path d="M8 6V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5"/></svg>Corrido</button>
+  <button data-v="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="6" r="1.6"/><circle cx="12" cy="18" r="1.6"/><path d="M4 12h16"/></svg>Real</button>
+  <button data-v="table"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 14a9 9 0 0 1 18 0v2H3z"/><circle cx="8" cy="11" r="1"/><circle cx="16" cy="11" r="1"/></svg>Mesa</button>
+</nav>
+
+<script>
+(function(){
+const RANKS=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const SUITS=['♠','♥','♦','♣'];
+const val=r=>['2','3','4','5','6'].includes(r)?1:(['7','8','9'].includes(r)?0:-1);
+const fmt=n=>n>0?'+'+n:(n<0?'−'+Math.abs(n):'0');
+const $=id=>document.getElementById(id);
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function makeDeck(n){const d=[];for(let k=0;k<n;k++)for(const s of SUITS)for(const r of RANKS)d.push({r,s});return shuffle(d);}
+function randCard(){return {r:RANKS[Math.floor(Math.random()*13)],s:SUITS[Math.floor(Math.random()*4)]};}
+function cardHTML(c,cls){const red=c.s==='♥'||c.s==='♦';
+  if((cls||'').includes('xs'))return `<div class="card ${red?'red':''} ${cls}"><span class="pip">${c.r}<small>${c.s}</small></span></div>`;
+  return `<div class="card ${red?'red':''} ${cls||''}" aria-label="${c.r} de ${c.s}"><span class="ci tl">${c.r}<i>${c.s}</i></span><span class="pip">${c.s}</span><span class="ci br">${c.r}<i>${c.s}</i></span></div>`;}
+
+/* Almacenamiento local */
+const KEY='hilo-v1';
+let S={best:0,cOk:0,cTot:0,tOk:0,tTot:0,lesson:0};
+try{const raw=localStorage.getItem(KEY);if(raw)Object.assign(S,JSON.parse(raw));}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+function updBest(){$('hdrBest').textContent=S.best;}
+updBest();
+
+/* Navegación */
+document.querySelectorAll('nav.tabs button').forEach(b=>b.addEventListener('click',()=>go(b.dataset.v)));
+function go(v){
+  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.toggleAttribute('aria-current',b.dataset.v===v));
+  document.querySelectorAll('nav.tabs button[aria-current]').forEach(b=>b.setAttribute('aria-current','page'));
+  $('main').scrollTop=0;
+  if(v!=='count')stopDeal();
+  if(v==='drill'&&!dCard)dNext();
+  if(v==='true'&&tRC===null)tNew();
+}
+
+/* Controles segmentados */
+const opts={n:10,speed:1000,group:1,tmode:'num'};
+document.querySelectorAll('.seg').forEach(seg=>{
+  seg.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+    seg.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+    const v=b.dataset.val; opts[seg.dataset.name]=isNaN(v)?v:Number(v);
+    if(seg.dataset.name==='tmode')tRender();
+  }));
+});
+
+/* Steppers */
+function stepper(outId){const out=$(outId);let v=0;
+  out.parentElement.querySelectorAll('button[data-step]').forEach(b=>b.addEventListener('click',()=>{v+=Number(b.dataset.step);out.textContent=fmt(v);}));
+  return {get:()=>v,set:n=>{v=n;out.textContent=fmt(v);}};}
+
+/* ===== LECCIONES ===== */
+const lessons=[
+ {t:'La idea en una frase',h:`<p>En el blackjack, las cartas altas (10 y ases) favorecen al jugador: dan más blackjacks y hacen que el crupier se pase más. Las bajas favorecen a la casa.</p><p>Contar cartas es llevar la cuenta de cuántas altas y bajas han salido. Cuando quedan muchas altas en el zapato, apuestas más. Cuando quedan pocas, apuestas lo mínimo.</p><p class="note">No memorizas cartas. Solo sumas y restas 1.</p>`},
+ {t:'Los tres grupos',h:`<p>El sistema Hi‑Lo da a cada carta uno de tres valores:</p>
+  <div class="groups">
+   <div><span class="badge b1">+1</span><span>2, 3, 4, 5, 6 · cartas bajas: si salen, el zapato mejora para ti</span></div>
+   <div><span class="badge b0">0</span><span>7, 8, 9 · neutras, las ignoras</span></div>
+   <div><span class="badge bm">−1</span><span>10, J, Q, K, A · cartas altas: si salen, el zapato empeora</span></div>
+  </div>
+  <p style="margin-top:14px">Toca cada carta para ver su valor:</p>
+  <div class="demo rankgrid" id="rg"></div>`,init(){
+   const g=$('rg');g.innerHTML=RANKS.map((r,i)=>`<button class="slot" data-r="${r}">${cardHTML({r,s:SUITS[i%4]},'sm')}<span class="badge ${val(r)>0?'b1':val(r)<0?'bm':'b0'}">${fmt(val(r))}</span></button>`).join('');
+   g.querySelectorAll('.slot').forEach(s=>s.addEventListener('click',()=>s.querySelector('.badge').classList.toggle('show')));}},
+ {t:'El conteo corrido',h:`<p>Empiezas en 0 cuando se baraja. Cada carta que ves, sumas su valor. Ese número acumulado es el <b>conteo corrido</b>.</p>
+  <div class="demo center"><div class="row" id="ex" style="justify-content:center;min-height:86px"></div>
+  <div class="chip" style="margin:14px 0"><span id="exN">0</span></div>
+  <button class="btn" id="exBtn">Siguiente carta</button></div>
+  <p class="note">Truco: un 10 y un 5 juntos se cancelan (−1 +1 = 0). Agrupa por parejas y irás el doble de rápido.</p>`,init(){
+   const seq=[{r:'K',s:'♠'},{r:'4',s:'♥'},{r:'6',s:'♣'},{r:'8',s:'♦'},{r:'2',s:'♠'},{r:'A',s:'♥'},{r:'3',s:'♦'}];let i=0,sum=0;
+   $('exBtn').addEventListener('click',()=>{
+     if(i>=seq.length){i=0;sum=0;$('ex').innerHTML='';$('exN').textContent='0';$('exBtn').textContent='Siguiente carta';return;}
+     const c=seq[i++];sum+=val(c.r);
+     $('ex').insertAdjacentHTML('beforeend',`<div class="center" style="gap:4px">${cardHTML(c,'sm deal')}<span class="note">${fmt(val(c.r))}</span></div>`);
+     $('exN').textContent=fmt(sum);
+     if(i>=seq.length)$('exBtn').textContent='Reiniciar ejemplo';});}},
+ {t:'El conteo real',h:`<p>Un +6 no significa lo mismo con 6 mazos por jugar que con 1. Por eso conviertes el conteo corrido en <b>conteo real</b>:</p>
+  <p style="font-family:var(--serif);font-size:1.25rem;text-align:center;margin:14px 0">conteo real = corrido ÷ mazos que quedan</p>
+  <div class="demo panel">
+   <div class="field"><label>Conteo corrido: <b id="trA">+6</b></label><input type="range" min="-15" max="20" value="6" id="trRC"></div>
+   <div class="field"><label>Mazos que quedan: <b id="trB">3</b></label><input type="range" min="1" max="12" value="6" id="trDK"></div>
+   <p style="margin:0;text-align:center">Conteo real ≈ <b style="font-family:var(--serif);font-size:1.6rem" id="trC">+2</b></p>
+  </div>
+  <p class="note">Calculas los mazos restantes mirando la bandeja de descarte. Con medio mazo de precisión basta.</p>`,init(){
+   const f=()=>{const rc=+$('trRC').value,dk=+$('trDK').value/2;$('trA').textContent=fmt(rc);$('trB').textContent=String(dk).replace('.',',');$('trC').textContent=fmt(Math.trunc(rc/dk));};
+   $('trRC').addEventListener('input',f);$('trDK').addEventListener('input',f);f();}},
+ {t:'Cuánto apostar',h:`<p>La ventaja del jugador sube aproximadamente medio punto porcentual por cada +1 de conteo real. Con conteo real +1 o menos, la casa sigue ganando, así que apuestas lo mínimo.</p>
+  <table class="ramp"><tr><th>Conteo real</th><th>Apuesta (unidades)</th></tr>
+  <tr><td>+1 o menos</td><td>1</td></tr><tr><td>+2</td><td>2</td></tr><tr><td>+3</td><td>4</td></tr><tr><td>+4</td><td>6</td></tr><tr><td>+5 o más</td><td>8</td></tr></table>
+  <p class="note" style="margin-top:12px">Esta es una rampa de ejemplo. Una unidad debería ser una fracción pequeña de tu banca total, porque incluso con ventaja hay rachas perdedoras largas.</p>`},
+ {t:'Antes de ir a una mesa',h:`<p>Contar solo sirve si ya juegas la <b>estrategia básica</b> perfecta (cuándo pedir, plantarse, doblar o dividir). Sin ella, la ventaja del conteo desaparece.</p>
+  <p>Contar cartas mentalmente es legal en la mayoría de lugares, pero los casinos pueden pedirte que dejes de jugar o barajar más seguido. Usar dispositivos para contar sí suele estar prohibido.</p>
+  <p>Ruta de práctica sugerida: domina <b>Valores</b> hasta responder sin dudar, luego <b>Corrido</b> hasta contar un mazo entero en menos de 25 segundos, después <b>Real</b> y por último la <b>Mesa</b>.</p>
+  <div class="panel" style="margin-top:16px"><p style="margin:0 0 6px"><b>Instálala en tu celular</b></p>
+  <p class="note" style="margin:0">iPhone (Safari): botón Compartir → “Agregar a inicio”.<br>Android (Chrome): menú ⋮ → “Agregar a la pantalla principal” o “Instalar app”.</p></div>`}
+];
+let li=Math.min(S.lesson||0,lessons.length-1);
+function renderLesson(){
+  const L=lessons[li];
+  $('lessonDots').innerHTML=lessons.map((_,i)=>`<i class="${i<=li?'on':''}"></i>`).join('');
+  $('lessonBody').innerHTML=`<h3>${li+1}. ${L.t}</h3>${L.h}`;
+  if(L.init)L.init();
+  $('lPrev').disabled=li===0;$('lPrev').style.opacity=li===0?.4:1;
+  $('lNext').textContent=li===lessons.length-1?'Practicar valores':'Siguiente';
+  S.lesson=li;save();$('main').scrollTop=0;
+}
+$('lPrev').addEventListener('click',()=>{if(li>0){li--;renderLesson();}});
+$('lNext').addEventListener('click',()=>{if(li<lessons.length-1){li++;renderLesson();}else go('drill');});
+renderLesson();
+
+/* ===== VALORES ===== */
+let dCard=null,dT0=0,dLock=false,dStreak=0,dOk=0,dTot=0,dTimes=[];
+function dNext(){dCard=randCard();$('drillCard').innerHTML=cardHTML(dCard,'big deal');$('drillFb').textContent='';$('drillFb').className='feedback';dT0=performance.now();dLock=false;}
+document.querySelectorAll('.vbtn').forEach(b=>b.addEventListener('click',()=>{
+  if(dLock||!dCard)return;dLock=true;
+  const v=Number(b.dataset.v),right=val(dCard.r),ok=v===right,el=$('drillCard').firstElementChild;
+  dTot++;
+  if(ok){dOk++;dStreak++;dTimes.push(performance.now()-dT0);if(dTimes.length>20)dTimes.shift();
+    if(dStreak>S.best){S.best=dStreak;save();updBest();}
+    el.classList.add('ok');}
+  else{dStreak=0;el.classList.add('bad');$('drillFb').textContent=`${dCard.r} vale ${fmt(right)}`;$('drillFb').className='feedback bad';}
+  $('dStreak').textContent=dStreak;$('dAcc').textContent=Math.round(dOk/dTot*100)+'%';
+  if(dTimes.length)$('dSpeed').textContent=(dTimes.reduce((a,b)=>a+b,0)/dTimes.length/1000).toFixed(2).replace('.',',');
+  setTimeout(dNext,ok?260:1100);
+}));
+
+/* ===== CONTEO CORRIDO ===== */
+let cSeq=[],cIdx=0,cTimer=null;const cStep=stepper('cVal');
+function show(id){['cSetup','cRun','cAsk','cResult'].forEach(x=>$(x).classList.toggle('hidden',x!==id));}
+function stopDeal(){clearTimeout(cTimer);cTimer=null;}
+function cBegin(){
+  cSeq=opts.n===52?makeDeck(1):makeDeck(1).slice(0,opts.n);cIdx=0;show('cRun');$('cZone').innerHTML='';$('cProg').style.width='0';
+  cTimer=setTimeout(cTick,500);
+}
+function cTick(){
+  if(cIdx>=cSeq.length){stopDeal();$('cZone').innerHTML='';cStep.set(0);show('cAsk');return;}
+  const g=cSeq.slice(cIdx,cIdx+opts.group);cIdx+=g.length;
+  $('cZone').innerHTML=g.map(c=>cardHTML(c,(opts.group>1?'mid':'big')+' deal')).join('');
+  $('cProg').style.width=(cIdx/cSeq.length*100)+'%';
+  cTimer=setTimeout(cTick,opts.speed);
+}
+$('cStart').addEventListener('click',cBegin);
+$('cAgain').addEventListener('click',cBegin);
+$('cStop').addEventListener('click',()=>{stopDeal();show('cSetup');});
+$('cSettings').addEventListener('click',()=>show('cSetup'));
+$('cCheck').addEventListener('click',()=>{
+  let sum=0;const items=cSeq.map(c=>{sum+=val(c.r);return `<div class="it">${cardHTML(c,'xs')}${fmt(sum)}</div>`;});
+  const ans=cStep.get(),ok=ans===sum;
+  S.cTot++;if(ok)S.cOk++;save();
+  $('cChipN').textContent=fmt(sum);
+  $('cFb').textContent=ok?'¡Exacto!':`Dijiste ${fmt(ans)}. El conteo era ${fmt(sum)}${Math.abs(ans-sum)===1?', te faltó una carta.':'.'}`;
+  $('cFb').className='feedback '+(ok?'ok':'bad');
+  $('cReview').innerHTML=items.join('');
+  $('cScore').textContent=S.cOk+'/'+S.cTot;
+  show('cResult');
+});
+$('cScore').textContent=S.cOk+'/'+S.cTot;
+
+/* ===== CONTEO REAL ===== */
+let tRC=null,tDK=0,tDone=false;const tStep=stepper('tVal');
+function tNew(){
+  tDK=[0.5,1,1.5,2,2.5,3,3.5,4,4.5,5,5.5][Math.floor(Math.random()*11)];
+  do{tRC=Math.floor(Math.random()*30)-11;}while(tRC===0);
+  tDone=false;tStep.set(0);$('tFb').textContent='';$('tNext').classList.add('hidden');$('tCheck').classList.remove('hidden');tRender();
+}
+function tRender(){
+  if(tRC===null)return;
+  $('tRC').textContent=fmt(tRC);
+  $('tDK').textContent=(opts.tmode==='eye'&&!tDone)?'?':String(tDK).replace('.',',');
+  $('tShoe').style.height=(tDK/6*100)+'%';$('tDisc').style.height=((6-tDK)/6*100)+'%';
+}
+$('tCheck').addEventListener('click',()=>{
+  const exact=tRC/tDK,acc=new Set([Math.trunc(exact),Math.round(exact)]),ans=tStep.get(),ok=acc.has(ans);
+  S.tTot++;if(ok)S.tOk++;save();tDone=true;tRender();
+  const ex=(Math.round(exact*100)/100).toString().replace('.',',');
+  $('tFb').innerHTML=(ok?'¡Bien! ':'No exactamente. ')+`${fmt(tRC)} ÷ ${String(tDK).replace('.',',')} = ${ex}, o sea ${fmt(Math.trunc(exact))}.`;
+  $('tFb').className='feedback '+(ok?'ok':'bad');
+  $('tScore').textContent=S.tOk+'/'+S.tTot;
+  $('tCheck').classList.add('hidden');$('tNext').classList.remove('hidden');
+});
+$('tNext').addEventListener('click',tNew);
+$('tScore').textContent=S.tOk+'/'+S.tTot;
+
+/* ===== MESA ===== */
+let shoe=[],mRC=0,mRound=0;const mStep=stepper('mVal');const TOTAL=6*52;
+function mNewShoe(msg){shoe=makeDeck(6);mRC=0;mRound=0;$('mRound').textContent=0;
+  $('mTable').innerHTML=`<p class="note" style="margin:6px 0">${msg||'Zapato nuevo: el conteo vuelve a 0.'}</p>`;
+  $('mAsk').classList.add('hidden');$('mRes').classList.add('hidden');mTray();}
+function mTray(){$('mPen').style.width=((TOTAL-shoe.length)/TOTAL*100)+'%';$('mLeft').textContent=decksLeft().toString().replace('.',',')+' mazos';}
+function decksLeft(){return Math.max(0.5,Math.round(shoe.length/52*2)/2);}
+function draw(){const c=shoe.pop();mRC+=val(c.r);return c;}
+function score(h){let t=0,a=0;h.forEach(c=>{if(c.r==='A'){a++;t+=11;}else t+=['J','Q','K','10'].includes(c.r)?10:+c.r;});while(t>21&&a){t-=10;a--;}return t;}
+function mDeal(){
+  if(shoe.length<TOTAL*0.25){mNewShoe('Se llegó a la tarjeta de corte. Zapato nuevo: el conteo vuelve a 0.');}
+  const players=[[],[],[]],dealer=[];
+  for(let k=0;k<2;k++){players.forEach(p=>p.push(draw()));dealer.push(draw());}
+  players.forEach(p=>{while(score(p)<12||(score(p)<17&&Math.random()<.5))p.push(draw());});
+  while(score(dealer)<17)dealer.push(draw());
+  mRound++;$('mRound').textContent=mRound;
+  const row=(who,h)=>`<div class="hand"><span class="who">${who}<br><b>${score(h)>21?'se pasó':score(h)}</b></span><div class="cards">${h.map(c=>cardHTML(c,'sm deal')).join('')}</div></div>`;
+  $('mTable').innerHTML=row('Crupier',dealer)+players.map((p,i)=>row('Jugador '+(i+1),p)).join('');
+  $('mRes').classList.add('hidden');mTray();
+}
+function bet(tc){return tc<=1?1:tc===2?2:tc===3?4:tc===4?6:8;}
+$('mDeal').addEventListener('click',mDeal);
+$('mAskBtn').addEventListener('click',()=>{$('mAsk').classList.remove('hidden');$('mRes').classList.add('hidden');mStep.set(0);$('mAsk').scrollIntoView({behavior:'smooth',block:'nearest'});});
+$('mCheck').addEventListener('click',()=>{
+  const ans=mStep.get(),ok=ans===mRC,dk=decksLeft(),tc=Math.trunc(mRC/dk);
+  $('mRes').innerHTML=`<p class="feedback ${ok?'ok':'bad'}" style="margin:0 0 8px">${ok?'¡Exacto!':'Dijiste '+fmt(ans)+'.'}</p>
+   <p style="margin:0">Conteo corrido: <b>${fmt(mRC)}</b><br>Mazos que quedan: <b>${String(dk).replace('.',',')}</b><br>Conteo real: <b>${fmt(tc)}</b><br>Apuesta sugerida: <b>${bet(tc)} ${bet(tc)===1?'unidad':'unidades'}</b></p>`;
+  $('mAsk').classList.add('hidden');$('mRes').classList.remove('hidden');
+});
+$('mNew').addEventListener('click',()=>mNewShoe());
+mNewShoe('Toca “Repartir ronda” para empezar. El conteo arranca en 0.');
+})();
+</script>
+</body>
+</html>
